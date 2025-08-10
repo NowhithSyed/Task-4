@@ -1,0 +1,92 @@
+-- Task 4: SQL for Data Analysis
+-- Dataset: olist.sqlite
+-- Tool: SQLite (DB Browser)
+
+--------------------------------------------------
+-- 1. SELECT + WHERE + ORDER BY
+--------------------------------------------------
+SELECT o.order_id,
+       o.customer_id,
+       o.order_purchase_timestamp,
+       SUM(p.payment_value) AS total_payment
+FROM orders o
+JOIN order_payments p ON o.order_id = p.order_id
+GROUP BY o.order_id, o.customer_id, o.order_purchase_timestamp
+HAVING total_payment > 500
+ORDER BY total_payment DESC;
+
+--------------------------------------------------
+-- 2. GROUP BY - Orders per Customer
+--------------------------------------------------
+SELECT customer_id,
+       COUNT(order_id) AS orders_count
+FROM orders
+GROUP BY customer_id
+ORDER BY orders_count DESC
+LIMIT 20;
+
+--------------------------------------------------
+-- 3. INNER JOIN - Customer Orders
+--------------------------------------------------
+SELECT c.customer_id,
+       c.customer_city,
+       o.order_id,
+       o.order_status,
+       o.order_purchase_timestamp
+FROM customers c
+INNER JOIN orders o ON c.customer_id = o.customer_id
+LIMIT 20;
+
+--------------------------------------------------
+-- 4. LEFT JOIN - Customers without Orders
+--------------------------------------------------
+SELECT c.customer_id,
+       c.customer_city
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_id IS NULL
+LIMIT 20;
+
+--------------------------------------------------
+-- 5. Aggregate Functions (SUM, AVG)
+--------------------------------------------------
+SELECT SUM(payment_value) AS total_revenue,
+       AVG(payment_value) AS avg_payment
+FROM order_payments;
+
+--------------------------------------------------
+-- 6. Average Revenue Per User (ARPU)
+--------------------------------------------------
+SELECT (SUM(p.payment_value) * 1.0) / COUNT(DISTINCT o.customer_id) AS arpu
+FROM order_payments p
+JOIN orders o ON p.order_id = o.order_id;
+
+--------------------------------------------------
+-- 7. Subquery - High Spending Customers
+--------------------------------------------------
+SELECT customer_id
+FROM orders
+WHERE customer_id IN (
+    SELECT o.customer_id
+    FROM orders o
+    JOIN order_payments p ON o.order_id = p.order_id
+    GROUP BY o.customer_id
+    HAVING SUM(p.payment_value) > 1000
+)
+GROUP BY customer_id;
+
+--------------------------------------------------
+-- 8. Create View
+--------------------------------------------------
+CREATE VIEW IF NOT EXISTS total_spent_per_customer AS
+SELECT o.customer_id,
+       SUM(p.payment_value) AS total_spent
+FROM orders o
+JOIN order_payments p ON o.order_id = p.order_id
+GROUP BY o.customer_id;
+
+--------------------------------------------------
+-- 9. Index Creation
+--------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orderpayments_order_id ON order_payments(order_id);
